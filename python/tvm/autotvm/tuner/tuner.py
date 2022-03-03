@@ -88,6 +88,10 @@ class Tuner(object):
             result for measurement
         """
 
+    def random_select(self):
+        """Return random points in the space"""
+        
+
     def tune(self, n_trial, measure_option, early_stopping=None, callbacks=(), si_prefix="G"):
         """Begin tuning
 
@@ -159,7 +163,10 @@ class Tuner(object):
             i += len(results)
             self.ttl = min(early_stopping + self.best_iter, n_trial) - i
 
-            self.update(inputs, results)
+            #self.update(inputs, results)
+            # YUFAN: here we use random 
+            self.random_select()
+
             for callback in callbacks:
                 callback(self, inputs, results)
 

@@ -284,6 +284,18 @@ class ModelBasedTuner(Tuner):
             self.trials = maximums
             self.trial_pt = 0
             self.train_ct += 1
+    
+    def random_select(self):
+        print("\n*** Using random selection ***\n")
+        random_list = []
+        for i in range(0, self.plan_size):
+            index = np.random.randint(len(self.space))
+            random_list.append(index)
+                
+        self.trials = random_list
+        self.trial_pt = 0
+        self.train_ct += 1
+
 
     def load_history(self, data_set):
         # set in_tuning as True to make the feature extraction consistent
