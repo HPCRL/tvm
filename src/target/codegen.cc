@@ -55,6 +55,20 @@ namespace codegen {
  */
 using FTVMTIRToRuntime = tvm::runtime::TypedPackedFunc<runtime::Module(IRModule, Target)>;
 
+std::string Build1(IRModule mod, Target target) {
+  if (transform::PassContext::Current()
+          ->GetConfig<Bool>("tir.disable_assert", Bool(false))
+          .value()) {
+    mod = tir::transform::SkipAssert()(mod);
+  }
+
+  // the build function.
+  std::string build_f_name = "target.build.cuda1";
+  const PackedFunc* bf = runtime::Registry::Get(build_f_name);
+  ICHECK(bf != nullptr) << build_f_name << " is not enabled";
+  return (*bf)(mod, target);
+}
+
 runtime::Module Build(IRModule mod, Target target) {
   if (transform::PassContext::Current()
           ->GetConfig<Bool>("tir.disable_assert", Bool(false))

@@ -293,30 +293,7 @@ def build(
         target_host = "llvm" if tvm.runtime.enabled("llvm") else "stackvm"
 
     annotated_mods, target_host = Target.canon_target_map_and_host(annotated_mods, target_host)
-
-    rt_mod_host = _driver_ffi.tir_to_runtime(annotated_mods, target_host)
-
-    annotated_mods, target_host = Target.canon_target_map_and_host(annotated_mods, target_host)
-
-    if not isinstance(target_host, Target):
-        target_host = Target(target_host)
-
-    if str(runtime) == "crt" and runtime["system-lib"]:
-        if target_host.kind.name == "c":
-            create_csource_crt_metadata_module = tvm._ffi.get_global_func(
-                "runtime.CreateCSourceCrtMetadataModule"
-            )
-            to_return = create_csource_crt_metadata_module([rt_mod_host], target_host, runtime)
-        elif target_host.kind.name == "llvm":
-            create_llvm_crt_metadata_module = tvm._ffi.get_global_func(
-                "runtime.CreateLLVMCrtMetadataModule"
-            )
-            to_return = create_llvm_crt_metadata_module([rt_mod_host], target_host, runtime)
-    else:
-        to_return = rt_mod_host
-
-    return OperatorModule.from_module(to_return, ir_module_by_target=annotated_mods, name=name)
-
+    return _driver_ffi.tir_to_runtime1(annotated_mods, target_host)
 
 class OperatorModule(Module):
     """Wraps the Module returned by tvm.build() and captures additional outputs of that function."""

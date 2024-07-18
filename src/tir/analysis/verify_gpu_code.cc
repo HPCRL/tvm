@@ -55,7 +55,12 @@ class GPUCodeVerifier : public StmtExprVisitor {
 
     // TODO(jcf94): Add support of detecting CUDA Misaligned Address error
     this->VisitStmt(stmt);
-
+    // std::cout << "shared_memory_per_block_ " << shared_memory_per_block_ << std::endl;
+    // std::cout << "max_shared_memory_per_block_ " << max_shared_memory_per_block_ << std::endl;
+    // // print errors_
+    // for (auto& err : errors_) {
+    //   std::cout << err << std::endl;
+    // }
     return errors_;
   }
 
@@ -310,6 +315,7 @@ std::vector<String> VerifyGPUCode_(const PrimFunc& func, Map<String, PrimExpr> c
       LOG(FATAL) << "Invalid check item: " << iter.first;
     }
   }
+  // max_shared_memory_per_block = 48*1024;
 
   return verifier.Verify(func->body, max_local_memory_per_block, max_shared_memory_per_block,
                          max_threads_per_block, max_thread_x, max_thread_y, max_thread_z,

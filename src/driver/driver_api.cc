@@ -525,9 +525,81 @@ runtime::Module TIRToRuntime(const Map<Target, IRModule>& inputs_arg,
   return mhost;
 }
 
+
+std::string TIRToRuntime1(const Map<Target, IRModule>& inputs_arg,
+                             const Target& target_host_arg) {
+  auto pass_ctx = transform::PassContext::Current();
+
+  std::vector<runtime::Module> device_modules;
+  Map<Target, IRModule> inputs = inputs_arg;
+  Target target_host = target_host_arg;
+
+  // Fetch previous defined target host in targets
+  CheckAndUpdateHostConsistency(&inputs, &target_host);
+
+  if (!target_host.defined()) {
+    for (const auto& it : inputs) {
+      if (it.first->kind->device_type == kDLCPU || it.first->kind->device_type == kDLMicroDev) {
+        target_host = it.first;
+        break;
+      }
+    }
+  }
+
+  if (!target_host.defined()) {
+    target_host = DefaultTargetHost(target_host);
+  }
+
+  // Update target host for all targets
+  CheckAndUpdateHostConsistency(&inputs, &target_host);
+
+  // Take the attrs from the first module so the eventual modules have them.
+  // Ideally this would just be one unified module all the way through;
+  IRModule first_module = (*inputs.begin()).second;
+  IRModule mhost_all = IRModule(Map<GlobalVar, BaseFunc>(), {}, {}, {}, first_module->attrs);
+
+  ICHECK(mhost_all.defined()) << "The host module must be defined";
+
+  for (const auto& it : inputs) {
+    if (it.second.defined()) {
+      const Target& target = it.first;
+      const IRModule& ir_module = it.second;
+      auto pair = SplitMixedModule(ir_module, target, target_host);
+      auto& host_mod = pair.first;
+      auto& device_mod = pair.second;
+
+      ICHECK(host_mod.defined()) << "The split host module must be defined";
+
+      ICHECK(mhost_all.defined()) << "The host module must be defined";
+
+      // We don't want library modules going back into host codegen
+      // unless they're supposed to. Here if we overrode the target host
+      // to allow lowering previously we check that it's meant to be placed
+      // back into the host Module.
+      bool overrides_host_target = target->kind->device_type == target_host->kind->device_type;
+      bool non_host_target_kind = target->kind != target_host->kind;
+      if (overrides_host_target && non_host_target_kind) {
+        device_modules.push_back(codegen::Build(host_mod, it.first));
+      } else {
+        mhost_all->Update(host_mod);
+      }
+
+      if (device_mod->functions.size() != 0) {
+        return codegen::Build1(device_mod, it.first);
+      }
+    }
+  }
+
+}
+
 TVM_REGISTER_GLOBAL("driver.tir_to_runtime")
     .set_body_typed([](const Map<Target, IRModule>& inputs_arg, Target host_target) {
       return TIRToRuntime(inputs_arg, host_target);
+    });
+
+TVM_REGISTER_GLOBAL("driver.tir_to_runtime1")
+    .set_body_typed([](const Map<Target, IRModule>& inputs_arg, Target host_target) {
+      return TIRToRuntime1(inputs_arg, host_target);
     });
 
 // Build for heterogeneous execution when targets are specified as

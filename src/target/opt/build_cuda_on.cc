@@ -125,6 +125,26 @@ std::string NVRTCCompile(const std::string& code, bool include_path = false) {
   return ptx;
 }
 
+std::string BuildCUDA1(IRModule mod, Target target) {
+  using tvm::runtime::Registry;
+  bool output_ssa = false;
+  CodeGenCUDA cg;
+  cg.Init(output_ssa);
+
+  for (auto kv : mod->functions) {
+    ICHECK(kv.second->IsInstance<PrimFuncNode>()) << "CodeGenCUDA: Can only take PrimFunc";
+    auto f = Downcast<PrimFunc>(kv.second);
+    auto calling_conv = f->GetAttr<Integer>(tvm::attr::kCallingConv);
+    ICHECK(calling_conv == CallingConv::kDeviceKernelLaunch)
+        << "CodeGenCUDA: expect calling_conv equals CallingConv::kDeviceKernelLaunch";
+    cg.AddFunction(f);
+  }
+
+  std::string code = cg.Finish();
+  // std::cout << "code: in BuildCuda:\n" << code << std::endl;
+  return code;
+}
+
 runtime::Module BuildCUDA(IRModule mod, Target target) {
   using tvm::runtime::Registry;
   bool output_ssa = false;
@@ -172,5 +192,6 @@ runtime::Module BuildCUDA(IRModule mod, Target target) {
 
 TVM_REGISTER_GLOBAL("target.build.cuda").set_body_typed(BuildCUDA);
 TVM_REGISTER_PASS_CONFIG_OPTION("cuda.kernels_output_dir", String);
+TVM_REGISTER_GLOBAL("target.build.cuda1").set_body_typed(BuildCUDA1);
 }  // namespace codegen
 }  // namespace tvm

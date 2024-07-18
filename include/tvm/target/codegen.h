@@ -46,6 +46,7 @@ using runtime::TVMRetValue;
  * \return The result runtime::Module.
  */
 runtime::Module Build(IRModule mod, Target target);
+std::string Build1(IRModule mod, Target target);
 
 /*!
  * \brief Serialize runtime module including its submodules
