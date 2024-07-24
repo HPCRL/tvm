@@ -243,6 +243,15 @@ def build(
             f"or dict of target to IRModule, "
             f"but got {type(inputs)}."
         )
+    # return None, None
+
+    # print("IR Module: ", ir_module)
+    primfunc = input_mod["default_function"]
+    # print("PrimFunc: ", primfunc)
+    from tvm.tir.analysis import verify_gpu_code
+    valid = verify_gpu_code(primfunc, {"max_shared_memory_per_block": 48*1024, "max_threads_per_block": 1024})
+    if valid == 0:
+        return None
 
     if not isinstance(inputs, (dict, container.Map)):
         target = Target.current() if target is None else target
